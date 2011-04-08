@@ -35,6 +35,21 @@ int ccd_common(param_t* params) {
   double *s = params->Xty;
   double factor2 = params->factor2;
 
+  // inf-norm of X'y
+  double infnorm = 0.;
+  for (int i=0; i < p; ++i) {
+    double this = fabs(s[i] / params->factor2);
+    if (this > infnorm)
+      infnorm = this;
+  }
+  if (params->trace > 0) printf("lambda: %f\n",params->lambda);
+  if (params->trace > 0) printf("infnorm: %f\n",infnorm);
+  if (params->lambda > infnorm) {
+    if (params->trace > 0) printf("returning because lambda > infnorm\n");
+    return 1; // XXX: quit if lambda > ||X'y||_inf
+  }
+
+
   if (params->trace >= 3)
     for (int i=0; i < p; ++i) {
       printf("penalize beta_%d with %.2f\n",i,params->w[i]);

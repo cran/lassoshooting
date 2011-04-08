@@ -1,0 +1,8 @@
+2011-04-08  Tobias Abenius <Tobias.Abenius@Chalmers.se>
+
+* ccd_r.c: fixed bug in parameter handling
+
+* ccd_common.c: Return directly if lambda > ||X'y||_inf
+
+* INDEX: more verbose
+* DESCRIPTION: more verbose

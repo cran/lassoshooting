@@ -39,8 +39,12 @@ SEXP ccd(SEXP args) {
   args = CDR(args); 
   for(int i = 0; args != R_NilValue; i++, args = CDR(args)) {
     const char *name = CHAR(PRINTNAME(TAG(args)));
-    if (params.trace) {
+    if (params.trace > 1) {
       Rprintf(__FILE__ ": parsing parameter %s\n",name);
+    }
+    if (CAR(args) == R_NilValue) {
+      //if (params.trace) Rprintf(__FILE__ ": parameter %s was null\n",name);
+      continue;
     }
     if (strcasecmp(name, "x")==0) { 
       X = REAL(CAR(args)); 
@@ -65,7 +69,11 @@ SEXP ccd(SEXP args) {
     }
     else if (strcasecmp(name, "forcezero")==0) { 
       if (length(CAR(args)) != 1) { error("length of forcezero should be 1!\n"); }
-      params.forcezero = INTEGER(CAR(args))[0]; 
+      SEXP newforcezero;
+      //double* nopen = REAL(CAR(args)); 
+      PROTECT(newforcezero = AS_INTEGER(CAR(args)));
+      params.forcezero = INTEGER(newforcezero)[0]; 
+      UNPROTECT(1);
     } 
     else if (strcasecmp(name, "thr")==0) { 
       if (length(CAR(args)) != 1) { error("length of thr should be 1!\n"); }
@@ -88,7 +96,11 @@ SEXP ccd(SEXP args) {
       if (wn != 1) error("penaltyweight should be p x 1");
     }
     else if (strcasecmp(name, "nopenalize")==0) { 
-      double* nopen = REAL(CAR(args)); 
+      SEXP newnopen;
+      //double* nopen = REAL(CAR(args)); 
+      PROTECT(newnopen = AS_NUMERIC(CAR(args)));
+      double *nopen = REAL(newnopen);
+      UNPROTECT(1);
       int N = length(CAR(args));
       nopenalize = (int*)R_alloc(N+1,sizeof(int));
       for(int i=0; i < N; ++i) {
@@ -101,7 +113,7 @@ SEXP ccd(SEXP args) {
     else if (strcasecmp(name, "trace")==0) { 
       if (length(CAR(args)) != 1) { error("length of trace should be 1!\n"); }
       params.trace = REAL(CAR(args))[0]; 
-      Rprintf("Tracing on!\n");
+      if (params.trace > 0) Rprintf("Tracing on!\n");
     } 
     else if (strcasecmp(name,"XtX")==0) {
       givenXtX = REAL(CAR(args)); 
