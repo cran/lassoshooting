@@ -26,12 +26,15 @@ Default 0 -- no information}
 \details{
 Estimates a sparse regression coefficient vector using a lasso (L1) penalty
 using the approach of cyclic coordinate descent. See references for details.
+
+The solver does NOT include an intercept, add a column of ones to \code{x} if your data is not centered.
 }
 \value{
 A list with components
 \item{coefficients}{Estimated regression coefficient vector}
 \item{iterations}{Number of iterations of outer loop used by algorithm}
 \item{delta}{Change in parameter value at convergence}
+\item{infnorm}{\eqn{||X'y||_\infty}}
 }
 \author{
   Tobias Abenius

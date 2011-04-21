@@ -33,7 +33,6 @@ SEXP ccd(SEXP args) {
   params.trace = 0;
   int *nopenalize = NULL;
   params.w = NULL;
-  params.factor2 = factor2;
 
   // argument handling
   args = CDR(args); 
@@ -50,8 +49,8 @@ SEXP ccd(SEXP args) {
       X = REAL(CAR(args)); 
       SEXP d = getAttrib(CAR(args), R_DimSymbol); // dimensions
       if (isNull(d)) {
-	Xm = 1;
-	Xn = length(CAR(args));
+	Xm = length(CAR(args));
+	Xn = 1;
       } else {
 	Xm = INTEGER(d)[0];
 	Xn = INTEGER(d)[1];
@@ -83,7 +82,10 @@ SEXP ccd(SEXP args) {
     else if (strcasecmp(name, "thr")==0) { 
       if (length(CAR(args)) != 1) { error("length of thr should be 1!\n"); }
       params.tol = REAL(CAR(args))[0]; 
-    } 
+    } else if(strcasecmp(name,"factor")==0) {
+      if (length(CAR(args)) != 1) { error("length of factor should be 1!\n"); }
+      factor2 = REAL(CAR(args))[0]; 
+    }
     else if (strcasecmp(name, "maxit")==0) { 
       if (length(CAR(args)) != 1) { error("length of maxit should be 1!\n"); }
       params.maxits = REAL(CAR(args))[0]; 
@@ -152,20 +154,21 @@ SEXP ccd(SEXP args) {
     Rprintf("X m: %d n: %d\n",Xm,Xn); 
     Rprintf("Y m: %d n: %d\n",Ym,Yn); 
   }
+  if (Ym != -1 && Xm != -1 && Xm != Ym) error("X and Y has different number of samples");
   int p = (Xn == -1)? XtXp : Xn; // no variables
   int m = (Xm == -1)? Xtym : Xm; // no equations
   if (wm != -1 && wm != p) error("penaltyweight should be p x 1\n");
   params.p = p;
   params.m = m;
 
-  int ret;
   params.XtX = (double*)R_alloc(p*p,sizeof(double));
+	if (params.trace > 0) printf("using factor %f\n",factor2); 
 
   double zero=0.;
   double one=1;
   if (params.trace>=2)  printf("havextx: %d\n",givenXtX!=NULL);
   if (!givenXtX && Xm != -1 && Xn != -1) { 
-    if (params.trace>=2) printf("calculating X'X\n",factor2);
+    if (params.trace>=2) printf("calculating X'X with factor %f\n",factor2);
     // X is MxN   X'X  NxM*MxN -> NxN
     F77_CALL(dgemm)("T","N",&Xn,&Xn,&Xm, &one,X,&Xm, X,&Xm, &zero,params.XtX,&Xn);  // 2X'X -> XtX
   } 
@@ -210,6 +213,7 @@ SEXP ccd(SEXP args) {
   for(int i=0; i < params.p; ++i) {
     params.beta[i] = 0.;
   }
+  params.factor2 = factor2;
   ccd_common(&params);
 
 #define NC 4
