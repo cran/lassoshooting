@@ -15,7 +15,7 @@
 
 SEXP ccd(SEXP args) {
   param_t params;
-  double *X,*y;
+  double *X = NULL,*y = NULL;
   double *givenXtX=NULL,*givenXty=NULL;
   int Xm, Xn;
   int Ym, Yn;
@@ -49,8 +49,13 @@ SEXP ccd(SEXP args) {
     if (strcasecmp(name, "x")==0) { 
       X = REAL(CAR(args)); 
       SEXP d = getAttrib(CAR(args), R_DimSymbol); // dimensions
-      Xm = INTEGER(d)[0];
-      Xn = INTEGER(d)[1];
+      if (isNull(d)) {
+	Xm = 1;
+	Xn = length(CAR(args));
+      } else {
+	Xm = INTEGER(d)[0];
+	Xn = INTEGER(d)[1];
+      }
     }
     else if (strcasecmp(name, "y")==0) { 
       y = REAL(CAR(args)); 
@@ -118,16 +123,23 @@ SEXP ccd(SEXP args) {
     else if (strcasecmp(name,"XtX")==0) {
       givenXtX = REAL(CAR(args)); 
       SEXP d = getAttrib(CAR(args), R_DimSymbol); // dimensions
+      if (isNull(d)) error("X'X should be a square matrix");
       int m = INTEGER(d)[0];
       int n = INTEGER(d)[1];
-      if (m!=n) error("X'X should be square, it is %dx%d!",m,n);
+      if (m!=n) error("X'X should be a square matrix, it is %dx%d!",m,n);
       XtXp = m;
     }
     else if (strcasecmp(name,"Xty")==0) {
       givenXty = REAL(CAR(args)); 
       SEXP d = getAttrib(CAR(args), R_DimSymbol); // dimensions
-      int m = INTEGER(d)[0];
-      int n = INTEGER(d)[1];
+      int m,n;
+      if (isNull(d)) {
+	m = length(CAR(args));
+	n = 1;
+      } else {
+	m = INTEGER(d)[0];
+	n = INTEGER(d)[1];
+      }
       if (n!=1) error("X'y should be Mx1, it is %dx%d!",m,n);
       Xtym = m;
     }
@@ -145,13 +157,6 @@ SEXP ccd(SEXP args) {
   if (wm != -1 && wm != p) error("penaltyweight should be p x 1\n");
   params.p = p;
   params.m = m;
-  if (!params.w) {
-    params.w = (double*)R_alloc(p,sizeof(double));
-    for(int i=0; i < p; ++i) params.w[i] = 1.0f;
-  }
-  for(int i=0; nopenalize && nopenalize[i] >= 0; ++i) {
-    params.w[nopenalize[i]] = 0.0f;
-  }
 
   int ret;
   params.XtX = (double*)R_alloc(p*p,sizeof(double));
@@ -197,6 +202,8 @@ SEXP ccd(SEXP args) {
   if (params.trace > 2) printf("X'y_(2,1)=%.4f\n",params.Xty[1]/2.);
   if (params.trace > 2) printf("X'y_(3,1)=%.4f\n",params.Xty[2]/2.);
 
+  params.nopenalize = nopenalize;
+
   SEXP beta_;
   PROTECT(beta_ = allocVector(REALSXP,p));
   params.beta = REAL(beta_);
@@ -205,15 +212,18 @@ SEXP ccd(SEXP args) {
   }
   ccd_common(&params);
 
-#define NC 3
-  char* names[NC] = {"coefficients","iterations","delta"};
-  SEXP list_names, list, itsR, deltaR;
+#define NC 4
+  char* names[NC] = {"coefficients","iterations","delta", "infnorm"};
+  SEXP list_names, list, itsR, deltaR, infnormR;
   PROTECT(itsR = NEW_INTEGER(1));
   int* itsRp = INTEGER_POINTER(itsR);
   *itsRp = params.its;
   PROTECT(deltaR = NEW_NUMERIC(1));
   double* deltaRp = NUMERIC_POINTER(deltaR);
   *deltaRp = params.delta;
+  PROTECT(infnormR = NEW_NUMERIC(1));
+  double* infnormRp = NUMERIC_POINTER(infnormR);
+  *infnormRp = params.infnorm;
 
   PROTECT(list_names = allocVector(STRSXP, NC));
   for(int i = 0; i < NC; i++)
@@ -223,8 +233,9 @@ SEXP ccd(SEXP args) {
   SET_VECTOR_ELT(list, 0, beta_);         // attaching beta vector to list
   SET_VECTOR_ELT(list, 1, itsR);      // attaching its vector to list
   SET_VECTOR_ELT(list, 2, deltaR);      // attaching its vector to list
+  SET_VECTOR_ELT(list, 3, infnormR);      // attaching its vector to list
   setAttrib(list, R_NamesSymbol, list_names); //and attaching the vector names
-  UNPROTECT(5);
+  UNPROTECT(6);
   return list;
   /*
   p = 3;

@@ -1,3 +1,7 @@
+2011-04-19  Tobias Abenius <Tobias.Abenius@Chalmers.se>
+
+* DESCRIPTION: lowered version requirement
+
 2011-04-08  Tobias Abenius <Tobias.Abenius@Chalmers.se>
 
 * ccd_r.c: fixed bug in parameter handling

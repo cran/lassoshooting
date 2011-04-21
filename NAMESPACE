@@ -1,2 +1,2 @@
-useDynLib('lassoshooting')
+useDynLib(lassoshooting)
 export(lassoshooting)

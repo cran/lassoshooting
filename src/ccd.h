@@ -7,6 +7,7 @@ typedef struct params {
   double *XtX;
   double *Xty;
   double lambda;
+  double infnorm;
   double *beta;
   int m;
   int p;
@@ -18,6 +19,8 @@ typedef struct params {
   double tol;
   int trace;
   double *w;
+  int*nopenalize;
+
   double factor2;
 } param_t;
 

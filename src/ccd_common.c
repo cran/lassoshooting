@@ -44,11 +44,18 @@ int ccd_common(param_t* params) {
   }
   if (params->trace > 0) printf("lambda: %f\n",params->lambda);
   if (params->trace > 0) printf("infnorm: %f\n",infnorm);
-  if (params->lambda > infnorm) {
-    if (params->trace > 0) printf("returning because lambda > infnorm\n");
-    return 1; // XXX: quit if lambda > ||X'y||_inf
+  params->infnorm = infnorm;
+  if (params->lambda > infnorm && !params->nopenalize) {
+    if (params->trace > 0) printf("returning because lambda > infnorm and nopenalize is not set\n");
+    return 1; // XXX: quit if lambda > ||X'y||_inf and nopenalize is not set
   }
-
+  if (!params->w) {
+    params->w = (double*)calloc(p,sizeof(double));
+    for(int i=0; i < p; ++i) params->w[i] = 1.0f;
+  }
+  for(int i=0; params->nopenalize && params->nopenalize[i] >= 0; ++i) {
+    params->w[params->nopenalize[i]] = 0.0f;
+  }
 
   if (params->trace >= 3)
     for (int i=0; i < p; ++i) {
@@ -88,6 +95,7 @@ int ccd_common(param_t* params) {
 	fprintf(stderr, "XtXjj = %f  \n",XtXjj);
 	fprintf(stderr, "\nGiving up...\n");
 	fprintf(stderr,"******************************************\n");
+	if(params->w) free(params->w);
 	return 0;
       }
 //      if (fabs(params->w[j]*params->lambda) < 1e-40) {
@@ -114,12 +122,16 @@ int ccd_common(param_t* params) {
       /* s <- s - 2*deltabeta XtX(:,j);
          axpy :: y <- ax + y*/
 #ifndef CBLAS
+#if 0
 #warning Using R fortran BLAS calls
+#endif
       const double factor = -deltabeta*factor2;
       int one = 1; // memory layout
       daxpy(&p, &factor, &params->XtX[j], &p, s, &one);
 #else
+#if 0
 #warning Using cblas BLAS calls
+#endif
       cblas_daxpy(p, -deltabeta*factor2,&params->XtX[j],p, s,1);
 #endif
       if (params->trace >= 2) 
@@ -143,6 +155,7 @@ int ccd_common(param_t* params) {
   for(int i=0; i < params->p; ++i) {
     params->beta[i] *= factor2;
   }
+  if(params->w) free(params->w);
   return 1;
 }
 
