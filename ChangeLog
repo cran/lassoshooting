@@ -1,3 +1,8 @@
+2011-04-21  Tobias Abenius <Tobias.Abenius@Chalmers.se>
+
+* ccd_r.c: Better argument parsing
+* ccd_r.c: Don't use factor2 to simulate LassoShooting.m
+
 2011-04-19  Tobias Abenius <Tobias.Abenius@Chalmers.se>
 
 * DESCRIPTION: lowered version requirement

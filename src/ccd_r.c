@@ -23,7 +23,7 @@ SEXP ccd(SEXP args) {
   Xtym = XtXp = Xm = Xn = Ym = Yn = -1;
   int wm = -1,wn = -1;
 
-  double factor2=2.;
+  double factor2=1.; // factor2=2 emulates LassoShooting.m
 
   //default parameters
   params.m = params.p = -1;
