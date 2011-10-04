@@ -1,3 +1,8 @@
+2011-10-04  Tobias Abenius <Tobias.Abenius@Chalmers.se>
+
+* ccd_r.c: Don't try to use 's' if it was not defined which
+can happen with the infnorm check
+
 2011-04-21  Tobias Abenius <Tobias.Abenius@Chalmers.se>
 
 * ccd_r.c: Better argument parsing

@@ -9,6 +9,7 @@ typedef struct params {
   double lambda;
   double infnorm;
   double *beta;
+  double *s;
   int m;
   int p;
 

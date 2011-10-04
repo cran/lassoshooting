@@ -32,13 +32,12 @@ int ccd_common(param_t* params) {
   //bool penalizethis = true;
   //int state = 1;
   int p = params->p;
-  double *s = params->Xty;
   double factor2 = params->factor2;
 
   // inf-norm of X'y
   double infnorm = 0.;
   for (int i=0; i < p; ++i) {
-    double this = fabs(s[i] / params->factor2);
+    double this = fabs(params->Xty[i] / params->factor2);
     if (this > infnorm)
       infnorm = this;
   }
@@ -48,6 +47,19 @@ int ccd_common(param_t* params) {
   if (params->lambda > infnorm && !params->nopenalize) {
     if (params->trace > 0) printf("returning because lambda > infnorm and nopenalize is not set\n");
     return 1; // XXX: quit if lambda > ||X'y||_inf and nopenalize is not set
+  }
+  double *s;
+  if (params->s)
+   s = params->s;
+  else {
+   s = params->Xty;
+   for(int i=0; i < p; ++i) { // compensate s for given beta
+     const double factor = -params->beta[i]*factor2;
+     if (factor != 0) {
+       int one = 1; // memory layout
+       daxpy(&p, &factor, &params->XtX[i], &p, s, &one);
+     }
+   }
   }
   if (!params->w) {
     params->w = (double*)calloc(p,sizeof(double));
@@ -155,6 +167,7 @@ int ccd_common(param_t* params) {
   for(int i=0; i < params->p; ++i) {
     params->beta[i] *= factor2;
   }
+  params->s = s;
   if(params->w) free(params->w);
   return 1;
 }

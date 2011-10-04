@@ -17,10 +17,14 @@ SEXP ccd(SEXP args) {
   param_t params;
   double *X = NULL,*y = NULL;
   double *givenXtX=NULL,*givenXty=NULL;
+  double *givenbeta=NULL;
+  double *givens=NULL;
   int Xm, Xn;
   int Ym, Yn;
+  int bm, bn;
+  int sm, sn;
   int XtXp,Xtym;
-  Xtym = XtXp = Xm = Xn = Ym = Yn = -1;
+  Xtym = XtXp = Xm = Xn = Ym = Yn = bm = bn = sn = sm = -1;
   int wm = -1,wn = -1;
 
   double factor2=1.; // factor2=2 emulates LassoShooting.m
@@ -46,16 +50,16 @@ SEXP ccd(SEXP args) {
       continue;
     }
     if (strcasecmp(name, "x")==0) { 
-      X = REAL(CAR(args)); 
-      SEXP d = getAttrib(CAR(args), R_DimSymbol); // dimensions
-      if (isNull(d)) {
-	Xm = length(CAR(args));
-	Xn = 1;
-      } else {
-	Xm = INTEGER(d)[0];
-	Xn = INTEGER(d)[1];
-      }
-    }
+			X = REAL(CAR(args)); 
+			SEXP d = getAttrib(CAR(args), R_DimSymbol); // dimensions
+			if (isNull(d)) {
+				Xm = length(CAR(args));
+				Xn = 1;
+			} else {
+				Xm = INTEGER(d)[0];
+				Xn = INTEGER(d)[1];
+			}
+		}
     else if (strcasecmp(name, "y")==0) { 
       y = REAL(CAR(args)); 
       SEXP d = getAttrib(CAR(args), R_DimSymbol); // dimensions
@@ -122,6 +126,28 @@ SEXP ccd(SEXP args) {
       params.trace = REAL(CAR(args))[0]; 
       if (params.trace > 0) Rprintf("Tracing on!\n");
     } 
+		else if (strcasecmp(name, "beta")==0) {
+			givenbeta = REAL(CAR(args));
+      SEXP d = getAttrib(CAR(args), R_DimSymbol); // dimensions
+      if(!isNull(d)) {
+        bm = INTEGER(d)[0];
+        bn = INTEGER(d)[1];
+      } else {
+        bm = length(CAR(args));
+        bn = 1;
+      }
+		}
+		else if (strcasecmp(name, "s") == 0) {
+			givens = REAL(CAR(args));
+      SEXP d = getAttrib(CAR(args), R_DimSymbol); // dimensions
+      if(!isNull(d)) {
+        sm = INTEGER(d)[0];
+        sn = INTEGER(d)[1];
+      } else {
+        sm = length(CAR(args));
+        sn = 1;
+      }
+		}
     else if (strcasecmp(name,"XtX")==0) {
       givenXtX = REAL(CAR(args)); 
       SEXP d = getAttrib(CAR(args), R_DimSymbol); // dimensions
@@ -185,11 +211,11 @@ SEXP ccd(SEXP args) {
     params.XtX[i] = factor2*params.XtX[i];
   if (params.trace >= 2) {
     FILE*D = fopen("ccd.debug","a");
-    for (int i=0; i < p; ++i)
-      for (int j=0; j < p; ++j)
-	fprintf(D,"X'X[%d,%d]: %f\n", i,j,params.XtX[i*p+j]);
-    fclose(D);
-  }
+		for (int i=0; i < p; ++i)
+			for (int j=0; j < p; ++j)
+				fprintf(D,"X'X[%d,%d]: %f\n", i,j,params.XtX[i*p+j]);
+		fclose(D);
+	}
 
 
   params.Xty = (double*)R_alloc(p,sizeof(double)); // NxM*Mx1 -> Nx1
@@ -207,18 +233,26 @@ SEXP ccd(SEXP args) {
 
   params.nopenalize = nopenalize;
 
+  if (givenbeta && (bn != 1 || bm != p)) {
+    error("Given beta length must equal the number of predictors");
+  }
+  if (givens && (sn != 1 || sm != p)) {
+    error("Given s length must equal the number of predictors");
+  }
+
   SEXP beta_;
   PROTECT(beta_ = allocVector(REALSXP,p));
   params.beta = REAL(beta_);
   for(int i=0; i < params.p; ++i) {
-    params.beta[i] = 0.;
+    params.beta[i] = givenbeta ? givenbeta[i] : 0.;
   }
   params.factor2 = factor2;
+  params.s = givens;
   ccd_common(&params);
 
-#define NC 4
-  char* names[NC] = {"coefficients","iterations","delta", "infnorm"};
-  SEXP list_names, list, itsR, deltaR, infnormR;
+#define NC 5
+  char* names[NC] = {"coefficients","iterations","delta", "infnorm","s"};
+  SEXP list_names, list, itsR, deltaR, infnormR, sR;
   PROTECT(itsR = NEW_INTEGER(1));
   int* itsRp = INTEGER_POINTER(itsR);
   *itsRp = params.its;
@@ -229,17 +263,29 @@ SEXP ccd(SEXP args) {
   double* infnormRp = NUMERIC_POINTER(infnormR);
   *infnormRp = params.infnorm;
 
-  PROTECT(list_names = allocVector(STRSXP, NC));
-  for(int i = 0; i < NC; i++)
+  int numelt = NC;
+  if (params.s) {
+    PROTECT(sR = allocVector(REALSXP,p));
+    {
+      double *s_ = REAL(sR);
+      for(int i=0; i < p; ++i) s_[i] = params.s[i];
+    }
+  } else {
+    -- numelt;
+  }
+  PROTECT(list_names = allocVector(STRSXP, numelt));
+  for(int i = 0; i < numelt; i++)
     SET_STRING_ELT(list_names, i,  mkChar(names[i]));
  
-  PROTECT(list = allocVector(VECSXP, NC)); // Creating a list with NC vector elements
-  SET_VECTOR_ELT(list, 0, beta_);         // attaching beta vector to list
+  PROTECT(list = allocVector(VECSXP, NC));// Creating a list with NC vector elements
+  SET_VECTOR_ELT(list, 0, beta_);     // attaching beta vector to list
   SET_VECTOR_ELT(list, 1, itsR);      // attaching its vector to list
-  SET_VECTOR_ELT(list, 2, deltaR);      // attaching its vector to list
-  SET_VECTOR_ELT(list, 3, infnormR);      // attaching its vector to list
+  SET_VECTOR_ELT(list, 2, deltaR);    // attaching delta vector to list
+  SET_VECTOR_ELT(list, 3, infnormR);  // attaching infnorm vector to list
+  if (params.s)
+    SET_VECTOR_ELT(list, 4, sR);        // attaching s vector to list
   setAttrib(list, R_NamesSymbol, list_names); //and attaching the vector names
-  UNPROTECT(6);
+  UNPROTECT(numelt+2);
   return list;
   /*
   p = 3;

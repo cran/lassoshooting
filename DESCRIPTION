@@ -1,6 +1,6 @@
 Package: lassoshooting
-Version: 0.1.4-2
-Date: 2011-04-26
+Version: 0.1.4-4
+Date: 2011-10-04
 Title: L1 regularized regression (Lasso) solver using the Cyclic
         Coordinate Descent algorithm aka Lasso Shooting
 Author: Tobias Abenius <Tobias.Abenius@Chalmers.se>
@@ -12,6 +12,6 @@ Description: L1 regularized regression (Lasso) solver using the Cyclic
         support coefficient-specific penalities and it can take X'X and
         X'y instead of X and y.
 License: LGPL-3
-Packaged: 2011-04-26 07:15:21 UTC; btobias
+Packaged: 2011-10-04 14:32:59 UTC; btobias
 Repository: CRAN
-Date/Publication: 2011-04-26 15:30:07
+Date/Publication: 2011-10-04 19:29:00
