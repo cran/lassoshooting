@@ -41,11 +41,11 @@ int ccd_common(param_t* params) {
     if (this > infnorm)
       infnorm = this;
   }
-  if (params->trace > 0) printf("lambda: %f\n",params->lambda);
-  if (params->trace > 0) printf("infnorm: %f\n",infnorm);
+  if (params->trace > 0) myprintf("lambda: %f\n",params->lambda);
+  if (params->trace > 0) myprintf("infnorm: %f\n",infnorm);
   params->infnorm = infnorm;
   if (params->lambda > infnorm && !params->nopenalize) {
-    if (params->trace > 0) printf("returning because lambda > infnorm and nopenalize is not set\n");
+    if (params->trace > 0) myprintf("returning because lambda > infnorm and nopenalize is not set\n");
     return 1; // XXX: quit if lambda > ||X'y||_inf and nopenalize is not set
   }
   double *s;
@@ -71,7 +71,7 @@ int ccd_common(param_t* params) {
 
   if (params->trace >= 3)
     for (int i=0; i < p; ++i) {
-      printf("penalize beta_%d with %.2f\n",i,params->w[i]);
+      myprintf("penalize beta_%d with %.2f\n",i,params->w[i]);
     }
   //
 
@@ -89,24 +89,31 @@ int ccd_common(param_t* params) {
  
       betajstar_old = betajstar;
       betajstar = s[j] + (factor2*XtXjj) * params->beta[j];
+#ifdef DEBUG
       if (params->trace >= 2) {
 	FILE*D = fopen("ccd.debug","a");
 	fprintf(D,"forcezero=%d, its=%d, betajstar-pre: %f\n", params->forcezero,its,betajstar);
 	fclose(D);
       }
+#endif
 
       if (isinf(betajstar) || isnan(betajstar)) {
-	fprintf(stderr,"******************************************\n"
+	myprintferr("******************************************\n"
 	     __FILE__ ": BUG OR PATHOLOGICAL DATA\n\n");
-	fprintf(stderr, "Please mail me the data that can reproduce this error <Tobias.Abenius@Chalmers.SE>\n");
-	fprintf(stderr, "betajstar prev = %f  \n",betajstar_old);
-	fprintf(stderr, "deltabeta prev = %f  \n",deltabeta);
-	fprintf(stderr, "s_%d = %f  \n",j,s[j]);
-	fprintf(stderr, "betajstar_%d = %f  \n",j,betajstar);
-	fprintf(stderr, "beta_%d = %f  \n",j,params->beta[j]);
-	fprintf(stderr, "XtXjj = %f  \n",XtXjj);
-	fprintf(stderr, "\nGiving up...\n");
-	fprintf(stderr,"******************************************\n");
+	myprintferr( "Please mail me the data that can reproduce this error <Tobias.Abenius@Chalmers.SE>\n");
+	myprintferr("betajstar prev = %f  \n",betajstar_old);
+	myprintferr("deltabeta prev = %f  \n",deltabeta);
+	myprintferr("s_%d = %f  \n",j,s[j]);
+	myprintferr("betajstar_%d = %f  \n",j,betajstar);
+	myprintferr("beta_%d = %f  \n",j,params->beta[j]);
+	myprintferr("XtXjj = %f  \n",XtXjj);
+	myprintferr("\nGiving up...\n");
+	myprintferr("******************************************\n");
+#       ifdef win32
+#         ifdef _THIS_IS_AN_R_PACKAGE
+            R_FlushConsole();
+#         endif 
+#       endif 
 	if(params->w) free(params->w);
 	return 0;
       }
@@ -114,20 +121,24 @@ int ccd_common(param_t* params) {
 //        betajstar /= factor2*XtXjj;
 //      } else {
         betajstar = softthresh(betajstar, params->w[j]*params->lambda) / (factor2*XtXjj);
+#ifdef DEBUG
       if (params->trace >= 2) {
 	FILE*D = fopen("ccd.debug","a");
 	fprintf(D,"forcezero=%d, its=%d, betajstar-post: %f, lam: %f, div: %f\n", params->forcezero,its,betajstar,params->w[j]*params->lambda,factor2*XtXjj);
 	fclose(D);
       }
+#endif
 
 //      }
 			//printf("beta_%d = %.4f\n",j,betajstar);
       deltabeta = betajstar - params->beta[j];
+#ifdef DEBUG
       if (params->trace >= 2) {
 	FILE*D = fopen("ccd.debug","a");
 	fprintf(D,"forcezero=%d, its=%d, deltabeta: %f\n", params->forcezero,its,deltabeta);
 	fclose(D);
       }
+#endif
 
       params->beta[j] = betajstar;
       delta = max(delta, fabs(deltabeta));
@@ -146,22 +157,26 @@ int ccd_common(param_t* params) {
 #endif
       cblas_daxpy(p, -deltabeta*factor2,&params->XtX[j],p, s,1);
 #endif
+#ifdef DEBUG
       if (params->trace >= 2) 
 	for (int di=0; di < p; ++di)  {
 	  FILE*D = fopen("ccd.debug","a");
 	  fprintf(D,"forcezero=%d, its=%d, s%d: %f\n", params->forcezero,its,di,s[di]);
 	  fclose(D);
 	}
+#endif
 
       //gsl_blas_daxpy(-deltabeta*factor2,&XtXj.vector, &s.vector);
     }
+#ifdef DEBUG
     if (params->trace >= 2) {
       FILE*D = fopen("ccd.debug","a");
       fprintf(D,"its = %d \tdelta %f  \n",its,delta);
       fclose(D);
     }
+#endif
   } while (++its < params->maxits && delta > params->tol);
-  if (params->trace) printf("ccd ran for %d iterations, delta: %g\n",its,delta);
+  if (params->trace) myprintf("ccd ran for %d iterations, delta: %g\n",its,delta);
   params->its = its;
   params->delta = delta;
   for(int i=0; i < params->p; ++i) {

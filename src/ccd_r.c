@@ -43,10 +43,10 @@ SEXP ccd(SEXP args) {
   for(int i = 0; args != R_NilValue; i++, args = CDR(args)) {
     const char *name = CHAR(PRINTNAME(TAG(args)));
     if (params.trace > 1) {
-      Rprintf(__FILE__ ": parsing parameter %s\n",name);
+      REprintf(__FILE__ ": parsing parameter %s\n",name);
     }
     if (CAR(args) == R_NilValue) {
-      //if (params.trace) Rprintf(__FILE__ ": parameter %s was null\n",name);
+      //if (params.trace) REprintf(__FILE__ ": parameter '%s' was null\n",name);
       continue;
     }
     if (strcasecmp(name, "x")==0) { 
@@ -72,11 +72,11 @@ SEXP ccd(SEXP args) {
       }
     }
     else if (strcasecmp(name, "lambda")==0)  { 
-      if (length(CAR(args)) != 1) { error("length of lambda should be 1!\n"); }
+      if (length(CAR(args)) != 1) { error(_("length of 'lambda' should be 1!\n")); }
       params.lambda = REAL(CAR(args))[0]; 
     }
     else if (strcasecmp(name, "forcezero")==0) { 
-      if (length(CAR(args)) != 1) { error("length of forcezero should be 1!\n"); }
+      if (length(CAR(args)) != 1) { error(_("length of 'forcezero' should be 1!\n")); }
       SEXP newforcezero;
       //double* nopen = REAL(CAR(args)); 
       PROTECT(newforcezero = AS_INTEGER(CAR(args)));
@@ -84,14 +84,14 @@ SEXP ccd(SEXP args) {
       UNPROTECT(1);
     } 
     else if (strcasecmp(name, "thr")==0) { 
-      if (length(CAR(args)) != 1) { error("length of thr should be 1!\n"); }
+      if (length(CAR(args)) != 1) { error(_("length of 'thr' should be 1!\n")); }
       params.tol = REAL(CAR(args))[0]; 
     } else if(strcasecmp(name,"factor")==0) {
-      if (length(CAR(args)) != 1) { error("length of factor should be 1!\n"); }
+      if (length(CAR(args)) != 1) { error(_("length of 'factor' should be 1!\n")); }
       factor2 = REAL(CAR(args))[0]; 
     }
     else if (strcasecmp(name, "maxit")==0) { 
-      if (length(CAR(args)) != 1) { error("length of maxit should be 1!\n"); }
+      if (length(CAR(args)) != 1) { error(_("length of 'maxit' should be 1!\n")); }
       params.maxits = REAL(CAR(args))[0]; 
     } 
     else if (strcasecmp(name, "penaltyweight")==0) { 
@@ -104,7 +104,7 @@ SEXP ccd(SEXP args) {
         wm = length(CAR(args));
         wn = 1;
       }
-      if (wn != 1) error("penaltyweight should be p x 1");
+      if (wn != 1) error(_("penaltyweight should be p x 1"));
     }
     else if (strcasecmp(name, "nopenalize")==0) { 
       SEXP newnopen;
@@ -117,14 +117,14 @@ SEXP ccd(SEXP args) {
       for(int i=0; i < N; ++i) {
         nopenalize[i] = nopen[i];
         if (nopenalize[i] < 0) 
-          error("Can not penalize variables with negative index! The range is 0 to p-1.\n"); 
+          error(_("Can not penalize variables with negative index! The range is 0 to p-1.\n")); 
       }
       nopenalize[N] = -1;
     } 
     else if (strcasecmp(name, "trace")==0) { 
-      if (length(CAR(args)) != 1) { error("length of trace should be 1!\n"); }
+      if (length(CAR(args)) != 1) { error(_("length of 'trace' should be 1!\n")); }
       params.trace = REAL(CAR(args))[0]; 
-      if (params.trace > 0) Rprintf("Tracing on!\n");
+      if (params.trace > 0) REprintf("Tracing on!\n");
     } 
 		else if (strcasecmp(name, "beta")==0) {
 			givenbeta = REAL(CAR(args));
@@ -137,8 +137,8 @@ SEXP ccd(SEXP args) {
         bn = 1;
       }
 		}
-		else if (strcasecmp(name, "s") == 0) {
-			givens = REAL(CAR(args));
+    else if (strcasecmp(name, "s") == 0) {
+      givens = REAL(CAR(args));
       SEXP d = getAttrib(CAR(args), R_DimSymbol); // dimensions
       if(!isNull(d)) {
         sm = INTEGER(d)[0];
@@ -151,10 +151,10 @@ SEXP ccd(SEXP args) {
     else if (strcasecmp(name,"XtX")==0) {
       givenXtX = REAL(CAR(args)); 
       SEXP d = getAttrib(CAR(args), R_DimSymbol); // dimensions
-      if (isNull(d)) error("X'X should be a square matrix");
+      if (isNull(d)) error(_("X'X should be a square matrix"));
       int m = INTEGER(d)[0];
       int n = INTEGER(d)[1];
-      if (m!=n) error("X'X should be a square matrix, it is %dx%d!",m,n);
+      if (m!=n) error(_("X'X should be a square matrix, it is %dx%d!"),m,n);
       XtXp = m;
     }
     else if (strcasecmp(name,"Xty")==0) {
@@ -168,54 +168,56 @@ SEXP ccd(SEXP args) {
 	m = INTEGER(d)[0];
 	n = INTEGER(d)[1];
       }
-      if (n!=1) error("X'y should be Mx1, it is %dx%d!",m,n);
+      if (n!=1) error(_("X'y should be Mx1, it is %dx%d!"),m,n);
       Xtym = m;
     }
     else {
-      error("Unknown parameter '%s'!\n",name); 
+      error(_("Unknown parameter '%s'!\n"),name); 
       return(R_NilValue);
     }
   }
   if (params.trace >=2) {
-    Rprintf("X m: %d n: %d\n",Xm,Xn); 
-    Rprintf("Y m: %d n: %d\n",Ym,Yn); 
+    REprintf("X m: %d n: %d\n",Xm,Xn); 
+    REprintf("Y m: %d n: %d\n",Ym,Yn); 
   }
-  if (Ym != -1 && Xm != -1 && Xm != Ym) error("X and Y has different number of samples");
+  if (Ym != -1 && Xm != -1 && Xm != Ym) error(_("X and Y has different number of samples"));
   int p = (Xn == -1)? XtXp : Xn; // no variables
   int m = (Xm == -1)? Xtym : Xm; // no equations
-  if (wm != -1 && wm != p) error("penaltyweight should be p x 1\n");
+  if (wm != -1 && wm != p) error(_("penaltyweight should be p x 1\n"));
   params.p = p;
   params.m = m;
 
   params.XtX = (double*)R_alloc(p*p,sizeof(double));
-	if (params.trace > 0) printf("using factor %f\n",factor2); 
+	if (params.trace > 0) REprintf("using factor %f\n",factor2); 
 
   double zero=0.;
   double one=1;
-  if (params.trace>=2)  printf("havextx: %d\n",givenXtX!=NULL);
+  if (params.trace>=2)  REprintf("havextx: %d\n",givenXtX!=NULL);
   if (!givenXtX && Xm != -1 && Xn != -1) { 
-    if (params.trace>=2) printf("calculating X'X with factor %f\n",factor2);
+    if (params.trace>=2) REprintf("calculating X'X with factor %f\n",factor2);
     // X is MxN   X'X  NxM*MxN -> NxN
     F77_CALL(dgemm)("T","N",&Xn,&Xn,&Xm, &one,X,&Xm, X,&Xm, &zero,params.XtX,&Xn);  // 2X'X -> XtX
   } 
   else if (givenXtX) {
-    if (params.trace>=2) printf("givenXtX\n");
+    if (params.trace>=2) REprintf("givenXtX\n");
     for(int i=0; i < p*p; ++i)
       params.XtX[i] = givenXtX[i];
   }
   else {
-    error("Need either X and y or XtX and Xty");
+    error(_("Need either X and y or XtX and Xty"));
   }
-  if (params.trace>=2) printf("scaling X'X with %f, p: %d\n",factor2,p);
+  if (params.trace>=2) REprintf("scaling X'X with %f, p: %d\n",factor2,p);
   for(int i=0; i < p*p; ++i)
     params.XtX[i] = factor2*params.XtX[i];
+#ifdef DEBUG
   if (params.trace >= 2) {
     FILE*D = fopen("ccd.debug","a");
-		for (int i=0; i < p; ++i)
-			for (int j=0; j < p; ++j)
-				fprintf(D,"X'X[%d,%d]: %f\n", i,j,params.XtX[i*p+j]);
-		fclose(D);
-	}
+    for (int i=0; i < p; ++i)
+      for (int j=0; j < p; ++j)
+	fprintf(D,"X'X[%d,%d]: %f\n", i,j,params.XtX[i*p+j]);
+    fclose(D);
+  }
+#endif
 
 
   params.Xty = (double*)R_alloc(p,sizeof(double)); // NxM*Mx1 -> Nx1
@@ -225,19 +227,19 @@ SEXP ccd(SEXP args) {
     for(int i=0; i < Xtym; ++i)
       params.Xty[i] = factor2*givenXty[i];
   } else {
-    error("Need either X and Y or XtX and Xty");
+    error(_("Need either X and y or XtX and Xty"));
   }
-  if (params.trace > 2) printf("X'y_(1,1)=%.4f\n",params.Xty[0]/2.);
-  if (params.trace > 2) printf("X'y_(2,1)=%.4f\n",params.Xty[1]/2.);
-  if (params.trace > 2) printf("X'y_(3,1)=%.4f\n",params.Xty[2]/2.);
+  if (params.trace > 2) REprintf("X'y_(1,1)=%.4f\n",params.Xty[0]/2.);
+  if (params.trace > 2) REprintf("X'y_(2,1)=%.4f\n",params.Xty[1]/2.);
+  if (params.trace > 2) REprintf("X'y_(3,1)=%.4f\n",params.Xty[2]/2.);
 
   params.nopenalize = nopenalize;
 
   if (givenbeta && (bn != 1 || bm != p)) {
-    error("Given beta length must equal the number of predictors");
+    error(_("Given beta length must equal the number of predictors"));
   }
   if (givens && (sn != 1 || sm != p)) {
-    error("Given s length must equal the number of predictors");
+    error(_("Given s length must equal the number of predictors"));
   }
 
   SEXP beta_;

@@ -1,3 +1,7 @@
+2012-04-26  Tobias Abenius <Tobias.Abenius@Chalmers.se>
+
+* softthresh_r.c: R interface to the soft threshold function by request
+
 2011-10-04  Tobias Abenius <Tobias.Abenius@Chalmers.se>
 
 * ccd_r.c: Don't try to use 's' if it was not defined which
