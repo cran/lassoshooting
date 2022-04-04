@@ -6,7 +6,8 @@
 Efficient estimates of sparse regression coefficients with a lasso (L1) penalty
 }
 \usage{
-lassoshooting(X=NULL, y=NULL, lambda, XtX=NULL, Xty=NULL, thr=1.0e-6, maxit=1e4, nopenalize=NULL, penaltyweight=NULL, trace=0, ...)
+lassoshooting(X=NULL, y=NULL, lambda, XtX=NULL, Xty=NULL, thr=1.0e-6,
+              maxit=1e4, nopenalize=NULL, penaltyweight=NULL, trace=0, ...)
 }
 \arguments{
 \item{X}{Design matrix: N by p matrix of p explanatory variables}

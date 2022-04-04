@@ -8,7 +8,10 @@
 #include <Rdefines.h>
 #include <Rinternals.h>
 #include <R_ext/PrtUtil.h>
-#include <R_ext/RS.h>	
+#include <R_ext/RS.h>
+#ifndef USE_FC_LEN_T
+# define USE_FC_LEN_T
+#endif
 #include <R_ext/BLAS.h>
 
 #include "ccd.h"
@@ -196,7 +199,7 @@ SEXP ccd(SEXP args) {
   if (!givenXtX && Xm != -1 && Xn != -1) { 
     if (params.trace>=2) REprintf("calculating X'X with factor %f\n",factor2);
     // X is MxN   X'X  NxM*MxN -> NxN
-    F77_CALL(dgemm)("T","N",&Xn,&Xn,&Xm, &one,X,&Xm, X,&Xm, &zero,params.XtX,&Xn);  // 2X'X -> XtX
+    F77_CALL(dgemm)("T","N",&Xn,&Xn,&Xm, &one,X,&Xm, X,&Xm, &zero,params.XtX,&Xn FCONE FCONE);  // 2X'X -> XtX
   } 
   else if (givenXtX) {
     if (params.trace>=2) REprintf("givenXtX\n");
@@ -222,7 +225,7 @@ SEXP ccd(SEXP args) {
 
   params.Xty = (double*)R_alloc(p,sizeof(double)); // NxM*Mx1 -> Nx1
   if (!givenXty && Xm != -1 && Ym != -1) {
-    F77_CALL(dgemv)("T", &Xm,&Xn, &factor2,X,&Xm, y,&Yn, &zero,params.Xty,&Yn); // Xty <- 2X'y
+    F77_CALL(dgemv)("T", &Xm,&Xn, &factor2,X,&Xm, y,&Yn, &zero,params.Xty,&Yn FCONE); // Xty <- 2X'y
   } else if (givenXty) {
     for(int i=0; i < Xtym; ++i)
       params.Xty[i] = factor2*givenXty[i];
